@@ -6,18 +6,15 @@ import numpy as np
 import random
 from collections import Counter
 
-# ===== 1. Подготовка данных =====
 with open('text.txt', 'r', encoding='utf-8') as f:
     text = f.read()
 
-# Токенизация слов и добавление маркеров диалога
 words = text.split()
 vocab = ['<PAD>', '<UNK>', '<USER>', '<BOT>'] + [word for word, count in Counter(words).most_common(5000) if count >= 3]
 vocab_size = len(vocab)
 word_to_idx = {w: i for i, w in enumerate(vocab)}
 idx_to_word = {i: w for i, w in enumerate(vocab)}
 
-# Преобразуем текст в индексы с маркерами
 data = []
 current_speaker = '<USER>'
 for word in words:
@@ -27,17 +24,15 @@ for word in words:
         data.append(word_to_idx.get(word, word_to_idx['<UNK>']))
         data.append(word_to_idx[current_speaker])
 
-# ===== 2. Параметры модели =====
 embed_size = 128
 num_heads = 4
 num_layers = 4
-block_size = 64  # Длина контекста в словах
+block_size = 64  
 batch_size = 32
 learning_rate = 0.0003
 #epochs = 2000
 epochs = 1000
 
-# ===== 3. Модель (Трансформер) =====
 class DialogGPT(nn.Module):
     def __init__(self):
         super().__init__()
@@ -56,7 +51,7 @@ class DialogGPT(nn.Module):
         B, T = x.shape
         positions = torch.arange(T, device=x.device).unsqueeze(0)
         x = self.embed(x) + self.pos_embed(positions)
-        x = self.transformer(x, x)  # Используем тот же x для encoder/decoder
+        x = self.transformer(x, x) 
         logits = self.fc(x)
         return logits
 
@@ -64,14 +59,12 @@ model = DialogGPT()
 optimizer = optim.AdamW(model.parameters(), lr=learning_rate)
 criterion = nn.CrossEntropyLoss(ignore_index=word_to_idx['<PAD>'])
 
-# ===== 4. Генерация батчей =====
 def get_batch():
     indices = [random.randint(0, len(data) - block_size - 1) for _ in range(batch_size)]
     x = torch.tensor([[data[i + j] for j in range(block_size)] for i in indices])
     y = torch.tensor([[data[i + j + 1] for j in range(block_size)] for i in indices])
     return x, y
 
-# ===== 5. Обучение =====
 for epoch in range(epochs):
     x, y = get_batch()
     logits = model(x)
@@ -84,7 +77,7 @@ for epoch in range(epochs):
     if epoch % 200 == 0:
         print(f'Epoch {epoch}, Loss: {loss.item():.4f}')
 
-# ===== 6. Генерация ответов =====
+
 def generate_response(prompt, max_length=50):
     model.eval()
     tokens = [word_to_idx.get(word, word_to_idx['<UNK>']) for word in prompt.split()]
@@ -104,11 +97,11 @@ def generate_response(prompt, max_length=50):
     ]])
     return response
 
-# ===== 7. Интерактивный режим =====
+
 print("Диалоговый бот (для выхода введите 'exit')")
 while True:
     user_input = input("Вы: ")
     if user_input.lower() in ['exit', 'quit']:
         break
     response = generate_response(user_input)
-    print("Бот:", response)
+    print("Софи:", response)
